@@ -21,7 +21,7 @@ int main()
 
     for (int i = 0; i < BUFFER_SIZE; i++)
     {
-        printf("Abs: %f, Phase: %f\n", bufferOut[i].absolute_value, bufferOut[i].phase);
+        printf("Abs: %f, Phase: %f\n", bufferIn[i].absolute_value, bufferIn[i].phase);
     }
 }
 
