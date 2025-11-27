@@ -4,7 +4,7 @@
 #define _USE_MATH_DEFINES
 #include <math.h>
 
-#define BUFFER_SIZE 128
+#define BUFFER_SIZE 1024
 
 int main()
 {
@@ -15,13 +15,15 @@ int main()
     for (int i = 0; i < BUFFER_SIZE; i++)
     {
         bufferIn[i] = ComplexReIm(sinf((float)2*M_PI*i/(float)(BUFFER_SIZE/4)), 0);
+        printf("Entrada %d: Abs: %f, Phase: %f\n", i, bufferIn[i].absolute_value, bufferIn[i].phase);
     }
+    printf("\n\n");
 
     ComputeFFT(bufferIn, bufferOut, BUFFER_SIZE);
 
     for (int i = 0; i < BUFFER_SIZE; i++)
     {
-        printf("Abs: %f, Phase: %f\n", bufferIn[i].absolute_value, bufferIn[i].phase);
+        printf("Entrada %d: Abs: %f, Phase: %f\n", i, bufferIn[i].absolute_value, bufferIn[i].phase);
     }
 }
 

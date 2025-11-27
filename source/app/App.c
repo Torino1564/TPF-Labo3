@@ -12,6 +12,7 @@
 #include <string.h>
 #include <stdbool.h>
 #include <stdlib.h>
+#include <stdio.h>
 #include "hardware.h"
 #include "drivers/board.h"
 #include "drivers/Timer.h"
@@ -25,6 +26,7 @@
 #define _USE_MATH_DEFINES
 #include <math.h>
 #include "FIR.h"
+#include "FFT.h"
 
 /*******************************************************************************
  *                                MACROS
@@ -38,7 +40,7 @@
  ******************************************************************************/
 
 static ADC_Handle adc;
-
+static UART_Handle uart;
 /*******************************************************************************
  *                           	PROTOTIPOS
  ******************************************************************************/
@@ -51,6 +53,7 @@ static ADC_Handle adc;
 /* Función de inicialización */
 void App_Init (void)
 {
+	TimerInit();
 	// Init ADC
 	{
 		ADC_Config adc_config = {};
@@ -68,9 +71,21 @@ void App_Init (void)
 		adc_config.clkDiv = 3;
 		adc = ADC_Init(&adc_config);
 	}
+
+	{
+		// Inicializacion del UART - FALTA PARIDAD
+		UART_Config uart_config = {};
+		uart_config.baudRate = 9600;
+		uart_config.tx = PORTNUM2PIN(PB, 17);
+		uart_config.rx = PORTNUM2PIN(PB, 16);
+		uart_config.uartNum = 0;
+		uart_config.mode = UART_TRANSCEIVER;
+		uart = UART_Init(&uart_config);
+	}
 }
 
 void App_Run (void)
 {
+
 
 }

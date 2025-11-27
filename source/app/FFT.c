@@ -4,6 +4,13 @@
 #include <stdint.h>
 #include <stdlib.h>
 
+#define LOG2_10 3.3219280948873623478703194294894
+
+float log2f(float x)
+{
+	return log10(x)*LOG2_10;
+}
+
 Complex ComplexReIm(complex_type re, complex_type im)
 {
     complex_type absolute_value = sqrt((re * re) + (im * im));
@@ -149,16 +156,16 @@ scalar_type BitRev(const scalar_type input, size_t numBits)
 
 		if (numBits % 2 != 0)
 		{
-			auto mask = input & (0b1 << (size_t)numBits/2);
+			scalar_type mask = input & (0b1 << (uint32_t)numBits/2);
 			result ^= mask;
 		}
 
 		return result;
 	}
 
-bool IsPowerOf2(const size_t n)
+bool IsPowerOf2(const uint32_t n)
 {
-    const auto size = n;
+    const uint32_t size = n;
     return (size & size - 1) == 0;
 }
 
@@ -178,7 +185,7 @@ Complex* CalculateTwiddleFactors(const uint64_t numSamples)
     return pArray;
 }
 
-int ComputeFFT(Complex* in, Complex* out, const size_t n)
+int ComputeFFT(Complex* in, Complex* out, const uint32_t n)
 	{
 		/* Data conditioning:
 		 * - This first part makes sure the input values are a power of 2
@@ -199,14 +206,14 @@ int ComputeFFT(Complex* in, Complex* out, const size_t n)
 
 		// Variables
 		float GA = gamma;
-		size_t mar = n / 2;
-		size_t gr = 1;
+		uint32_t mar = n / 2;
+		uint32_t gr = 1;
 
 		for (unsigned r = 1; r <= GA; ++r) {
-			for (size_t g = 0; g < gr; ++g) {
-				for (size_t m = 0; m < mar; ++m) {
-					const size_t A_index = m + 2 * mar * g;
-					const size_t B_index = A_index + n / (1u << r);
+			for (uint32_t g = 0; g < gr; ++g) {
+				for (uint32_t m = 0; m < mar; ++m) {
+					const uint32_t A_index = m + 2 * mar * g;
+					const uint32_t B_index = A_index + n / (1u << r);
 					const uint16_t W_index = BitRev(2 * g, GA);
 
 					Complex A = in[A_index];
@@ -223,7 +230,7 @@ int ComputeFFT(Complex* in, Complex* out, const size_t n)
 		}
 
 		// Bit reversal reordering
-		for (size_t k = 1; k <= n; ++k) {
+		for (uint32_t k = 1; k <= n; ++k) {
 			uint16_t g = BitRev((unsigned)(k - 1), GA);
 			uint16_t I = g + 1;
 			if (I > k) {
