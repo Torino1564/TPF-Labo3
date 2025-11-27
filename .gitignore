@@ -1,0 +1,108 @@
+# Created by https://www.toptal.com/developers/gitignore/api/c
+# Edit at https://www.toptal.com/developers/gitignore?templates=c
+
+### C ###
+# Prerequisites
+*.d
+*/.venv
+
+.settings/
+
+# Object files
+*.o
+*.ko
+*.obj
+*.elf
+
+# Linker output
+*.ilk
+*.map
+*.exp
+
+# Precompiled Headers
+*.gch
+*.pch
+
+# Libraries
+*.lib
+*.a
+*.la
+*.lo
+
+# Shared objects (inc. Windows DLLs)
+*.dll
+*.so
+*.so.*
+*.dylib
+
+# Executables
+*.exe
+*.out
+*.app
+*.i*86
+*.x86_64
+*.hex
+
+# Debug files
+*.dSYM/
+*.su
+*.idb
+*.pdb
+
+# Kernel Module Compile Results
+*.mod*
+*.cmd
+.tmp_versions/
+modules.order
+Module.symvers
+Mkfile.old
+dkms.conf
+
+# End of https://www.toptal.com/developers/gitignore/api/c
+/Release/
+
+# Minimal .gitignore (Python + VSCode)
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# Entornos virtuales
+.env
+.venv
+env/
+venv/
+
+# Build / dist / paquetes
+build/
+dist/
+*.egg-info/
+
+# Caches / reports
+.pytest_cache/
+.mypy_cache/
+.coverage
+
+# VSCode
+.vscode/*
+!.vscode/settings.json
+!.vscode/launch.json
+!.vscode/tasks.json
+!.vscode/extensions.json
+!.vscode/*.code-snippets
+
+# Archivos del sistema
+.DS_Store
+Thumbs.db
+
+# Logs y binarios compilados
+*.log
+*.pyc
+*.so
+*.dll
+*.dylib
+/Debug/
+/Debug Test/
+FSKGen/fsk_12bit_ABC.csv
+/Debug V2/
