@@ -9,6 +9,7 @@
 
 #include "KPS.h"
 #include "drivers/Timer.h"
+#include "drivers/dac.h"
 #include <stdlib.h>
 
 /****************************MACROS****************************/
@@ -32,6 +33,7 @@ typedef struct{
 
 KPS * pKPS = NULL;
 int16_t kps_buffer[MAX_DELAY];
+ticks note_ticks;
 
 /***********************FUNCIONES PRIV****************************/
 
@@ -52,12 +54,9 @@ int8_t KPS_Init(KPS_Config * config)
 	// guardo la config
 	pKPS->kps_config = *config;
 
-	// punero a void auxiliar
-	void* aux;
 
-	// registro un timer con frecuencia de sampleo
-	pKPS->timer = TimerRegisterPeriodicInterruption(KPS_Processing, US_TO_TICKS(1000000/pKPS->kps_config.sample_frequency), aux);
-
+	// inicializo el DAC
+	Dac_Init();
 
 	return 1;
 }
@@ -76,11 +75,28 @@ void KPS_SendNote(uint16_t note)
 	// se comienza en 0 el buffer
 	pKPS->kps_index = 0;
 
+	// punero a void auxiliar
+	void* aux;
 
+	// registro un timer con frecuencia de sampleo
+	pKPS->timer = TimerRegisterPeriodicInterruption(KPS_Processing, US_TO_TICKS(1000000/pKPS->kps_config.sample_frequency), aux);
+
+	note_ticks = Now();
+
+	return;
 }
 
 void KPS_Processing(void*)
 {
+	ticks actual_ticks = Now();
+
+	// si pasaron mas de 3 segundos
+	if(actual_ticks - note_ticks > 3000)
+	{
+		TimerUnregisterPeriodicInterruption(pKPS->timer);
+		return;
+	}
+
 	// tomo las
 	int32_t ZN = kps_buffer[(pKPS->kps_index + pKPS->kps_order) % pKPS->kps_order];
 	int32_t ZN_1 = kps_buffer[(pKPS->kps_index + pKPS->kps_order + 1) % pKPS->kps_order];
@@ -105,4 +121,7 @@ void KPS_Processing(void*)
 
 	// avanzo en el buffer hasta llegar al maximo y vuelvo (buffer circular)
 	pKPS->kps_index = (pKPS->kps_index + 1) % pKPS->kps_order;
+
+	// escribo en la salida del DAC
+	Dac_Write12(y);
 }
