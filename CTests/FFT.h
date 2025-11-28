@@ -1,4 +1,5 @@
 #include <stdbool.h>
+#include <stdint.h>
 
 #define complex_type float
 #define scalar_type uint16_t
@@ -20,4 +21,5 @@ bool ComplexCompare(Complex a, Complex b, complex_type epsilon);
 Complex ComplexMultScalar(Complex a, complex_type b);
 Complex ComplexExp(Complex a, complex_type b);
 
-int ComputeFFT(Complex* in, Complex* out, const size_t n);
+int ComputeFFT(Complex* in, Complex* out, uint32_t n);
+int ComputeIFFT(Complex* in, Complex* out, uint32_t n);

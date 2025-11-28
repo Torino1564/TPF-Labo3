@@ -4,8 +4,10 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#define complex_type float
-#define scalar_type uint16_t
+typedef float data_t;
+typedef data_t complex_type;
+typedef uint16_t scalar_type;
+
 
 typedef struct {
     complex_type absolute_value;
@@ -25,5 +27,6 @@ Complex ComplexMultScalar(Complex a, complex_type b);
 Complex ComplexExp(Complex a, complex_type b);
 
 int ComputeFFT(Complex* in, Complex* out, const uint32_t n);
+int ComputeIFFT(Complex* in, Complex* out, const uint32_t n);
 
 #endif

@@ -3,6 +3,7 @@
 #include <math.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include <string.h>
 
 #define LOG2_10 3.3219280948873623478703194294894
 
@@ -166,7 +167,7 @@ scalar_type BitRev(const scalar_type input, size_t numBits)
 bool IsPowerOf2(const uint32_t n)
 {
     const uint32_t size = n;
-    return (size & size - 1) == 0;
+    return (size & (size - 1)) == 0;
 }
 
 Complex* CalculateTwiddleFactors(const uint64_t numSamples)
@@ -186,60 +187,97 @@ Complex* CalculateTwiddleFactors(const uint64_t numSamples)
 }
 
 int ComputeFFT(Complex* in, Complex* out, const uint32_t n)
+{
+    /* Data conditioning:
+        * - This first part makes sure the input values are a power of 2
+        * - It then generates a local copy
+        * - Properly orders the data
+    */
+
+    if (!IsPowerOf2(n))
+    {
+        return -1;
+    }
+
+    // Use input as output
+    if (out == 0)
+    {
+        out = in;
+    }
+    else
+    {
+        memcpy(out, in, sizeof(Complex)*n);
+    }
+
+    const float gamma = (uint32_t)log2f(n);
+
+    Complex* W = CalculateTwiddleFactors(n);
+
+    // Initialize loop variables
+
+    // Variables
+    float GA = gamma;
+    size_t mar = n / 2;
+    size_t gr = 1;
+
+    for (unsigned r = 1; r <= GA; ++r) {
+        for (size_t g = 0; g < gr; ++g) {
+            for (size_t m = 0; m < mar; ++m) {
+                const size_t A_index = m + 2 * mar * g;
+                const size_t B_index = A_index + n / (1u << r);
+                const uint16_t W_index = BitRev(2 * g, GA);
+
+                Complex A = out[A_index];
+                Complex B = out[B_index];
+                Complex C = W[W_index];
+
+                Complex T =  ComplexMult(B, C);
+                out[A_index] = ComplexAdd(A, T);
+                out[B_index] = ComplexSubs(A, T);
+            }
+        }
+        mar /= 2;
+        gr *= 2;
+    }
+
+    // Bit reversal reordering
+    for (size_t k = 1; k <= n; ++k) {
+        uint16_t g = BitRev((unsigned)(k - 1), GA);
+        uint16_t I = g + 1;
+        if (I > k) {
+            Complex temp = out[k - 1];
+            out[k - 1] = out[I - 1];
+            out[I - 1] = temp;
+        }
+    }
+
+    free(W);
+    return 0;
+}
+
+/*
+ * This function uses the forward FFT to calculate the inverse FFT
+ * In order to do this, the imgaginary part of the input vector is negated.
+ * Then the forward FFT is run. After thatm the imaginary part of the output vector
+ * is negated. Last but not least the absolute value of the output is divided by N
+ */
+int ComputeInverseFFT(Complex* in, Complex* out, const uint32_t n)
+{
+	// Negate input vector
+	for (uint16_t i = 0; i < n; i++)
 	{
-		/* Data conditioning:
-		 * - This first part makes sure the input values are a power of 2
-		 * - It then generates a local copy
-		 * - Properly orders the data
-		*/
-
-		if (!IsPowerOf2(n))
-		{
-			return -1;
-		}
-
-		const float gamma = (uint32_t)log2f(n);
-
-		Complex* W = CalculateTwiddleFactors(n);
-
-		// Initialize loop variables
-
-		// Variables
-		float GA = gamma;
-		uint32_t mar = n / 2;
-		uint32_t gr = 1;
-
-		for (unsigned r = 1; r <= GA; ++r) {
-			for (uint32_t g = 0; g < gr; ++g) {
-				for (uint32_t m = 0; m < mar; ++m) {
-					const uint32_t A_index = m + 2 * mar * g;
-					const uint32_t B_index = A_index + n / (1u << r);
-					const uint16_t W_index = BitRev(2 * g, GA);
-
-					Complex A = in[A_index];
-					Complex B = in[B_index];
-					Complex C = W[W_index];
-
-					Complex T =  ComplexMult(B, C);
-					in[A_index] = ComplexAdd(A, T);
-					in[B_index] = ComplexSubs(A, T);
-				}
-			}
-			mar /= 2;
-			gr *= 2;
-		}
-
-		// Bit reversal reordering
-		for (uint32_t k = 1; k <= n; ++k) {
-			uint16_t g = BitRev((unsigned)(k - 1), GA);
-			uint16_t I = g + 1;
-			if (I > k) {
-				Complex temp = in[k - 1];
-				in[k - 1] = in[I - 1];
-				in[I - 1] = temp;
-			}
-		}
-
-        free(W);
-		return 0;
+		in[i].phase *= -1;
 	}
+
+	// Run Forward FFT
+	ComputeFFT(in, out, n);
+
+	// Negate imaginary part and divide by N
+	for (uint16_t i = 0; i < n; i++)
+	{
+		in[i].phase *= -1;
+		in[i].absolute_value /= n;
+	}
+
+	return 0;
+}
