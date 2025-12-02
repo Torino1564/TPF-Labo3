@@ -11,7 +11,7 @@
 
 static Complex buffer[MAX_BUFFER_SIZE*2] = {};
 
-bool AutocorrelationFunction(data_t* pIn, data_t* pOut, uint32_t w, uint32_t t)
+bool AutocorrelationFunction(data_t* pIn, data_t* pOut, uint32_t w)
 {
 	memset(buffer,0 , sizeof(Complex)*MAX_BUFFER_SIZE*2);
 
@@ -22,7 +22,7 @@ bool AutocorrelationFunction(data_t* pIn, data_t* pOut, uint32_t w, uint32_t t)
 
 	for (uint16_t i = 0; i < w; i++)
 	{
-		const float val = pIn[i+t];
+		const float val = pIn[i];
 		if (val >= 0)
 			buffer[i] = (Complex){val, 0};
 		else
@@ -48,20 +48,41 @@ bool AutocorrelationFunction(data_t* pIn, data_t* pOut, uint32_t w, uint32_t t)
 	return 1;
 }
 
-data_t DifferenceFunction(data_t* pIn, uint32_t w, uint32_t t, uint32_t tau)
+/* Compute difference function using a linear iteration and not FFT
+ Parameters:
+ - pBuffer: Buffer representing the data
+ - w: size of the window
+ - tau: Value to compute the Autocorrelation
+ Note that the function assumes that the buffer will be AT LEAST of size W + Tau
+ Return Value: Autocorrelation Value
+ */
+float LinearAutocorrelation(const float* pBuffer, const uint16_t w, const uint16_t tau)
 {
-	static data_t buffer[MAX_BUFFER_SIZE];
+    float result = 0;
+    for (uint16_t i = 0; i < w; i++)
+    {
+        result += pBuffer[i] * pBuffer[i+tau];
+    }
+    return result;
+}
+
+bool DifferenceFunction(data_t* pIn, data_t* pOut, uint32_t w)
+{
+	static data_t acf0[MAX_BUFFER_SIZE];
 
 	memset(buffer, 0, sizeof(buffer));
 
 	// ACF t
-	bool rv = AutocorrelationFunction(pIn, buffer, w, t);
-	float r0 = buffer[0];
-	float r2 = buffer[tau];
+	bool rv = AutocorrelationFunction(pIn, acf0, w);
 
-	rv = AutocorrelationFunction(pIn, buffer, w, t+tau);
-	float r1 = buffer[0];
+	for (uint32_t i = 0; i < w; i++)
+	{
+		data_t r0 = acf0[0];
+		data_t r2 = acf0[i];
+		data_t r1 = LinearAutocorrelation(pIn+i, w, 0);
 
-	const float result = r0 + r1 + r2;
-	return result;
+		pOut[i] = r0 + r1 - 2*r2;
+	}
+
+	return 1;
 }

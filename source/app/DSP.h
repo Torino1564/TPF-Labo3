@@ -18,8 +18,7 @@
  * Returns: true if success
  */
 
-data_t DifferenceFunction(data_t* pIn, uint32_t w, uint32_t t, uint32_t tau);
-
-bool AutocorrelationFunction(data_t* pIn, data_t* pOut, uint32_t w, uint32_t t);
+bool AutocorrelationFunction(data_t* pIn, data_t* pOut, uint32_t w);
+bool DifferenceFunction(data_t* pIn, data_t* pOut, uint32_t w);
 
 #endif /* APP_DSP_H_ */
