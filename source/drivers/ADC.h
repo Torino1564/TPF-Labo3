@@ -98,6 +98,8 @@ typedef struct {
 // inicializacion
 ADC_Handle ADC_Init(ADC_Config* pConfig);
 bool ADC_GetBackBuffer(uint8_t adcNum, uint16_t** pBuffer, size_t* size);
+bool ADC_GetBackBufferCopy(uint8_t adcNum, float* pBuffer, size_t* size);
+
 // para realizar una sola conversion
 void ADC_SingleRead(uint8_t adcNum);
 

@@ -8,6 +8,7 @@
 #include "DSP.h"
 #include <string.h>
 #include <math.h>
+#include "lut_tables.h"
 
 static Complex buffer[MAX_BUFFER_SIZE*2] = {};
 
@@ -42,7 +43,7 @@ bool AutocorrelationFunction(data_t* pIn, data_t* pOut, uint32_t w)
 	for (uint16_t i = 0; i < w; i++)
 	{
 		const Complex temp = buffer[i];
-		pOut[i] = cosf(temp.phase)*temp.absolute_value;
+		pOut[i] = fast_cos(temp.phase)*temp.absolute_value;
 	}
 
 	return 1;
@@ -66,16 +67,15 @@ float LinearAutocorrelation(const float* pBuffer, const uint16_t w, const uint16
     return result;
 }
 
-bool DifferenceFunction(data_t* pIn, data_t* pOut, uint32_t w)
+bool DifferenceFunction(data_t* pIn, data_t* pOut, uint32_t w, uint32_t max_tau)
 {
 	static data_t acf0[MAX_BUFFER_SIZE];
 
 	memset(buffer, 0, sizeof(buffer));
-
 	// ACF t
 	bool rv = AutocorrelationFunction(pIn, acf0, w);
 
-	for (uint32_t i = 0; i < w; i++)
+	for (uint32_t i = 0; i < max_tau; i++)
 	{
 		data_t r0 = acf0[0];
 		data_t r2 = acf0[i];
@@ -85,4 +85,19 @@ bool DifferenceFunction(data_t* pIn, data_t* pOut, uint32_t w)
 	}
 
 	return 1;
+}
+
+bool CMNDF(data_t* pIn, uint32_t w)
+{
+    data_t runningSum = 0;
+
+    pIn[0] = 1.0f;
+
+    for (uint32_t tau = 1; tau < w; tau++)
+    {
+        runningSum += pIn[tau];
+        pIn[tau] = (pIn[tau] * tau) / runningSum;
+    }
+
+    return 1;
 }

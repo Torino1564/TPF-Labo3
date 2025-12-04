@@ -327,6 +327,46 @@ bool ADC_GetBackBuffer(uint8_t adcNum, uint16_t** pBuffer, size_t* size)
 	return true;
 }
 
+bool ADC_GetBackBufferCopy(uint8_t adcNum, float* pBuffer, size_t* size)
+{
+	ADC* pADC = pInstances[adcNum];
+	if(!(pADC->newBufData))
+	{
+		*size = 0;
+		return false;
+	}
+	pADC->newBufData = 0;	// apagit
+
+	*size = pADC->config.bufferSize;
+	uint16_t* pInternalBuffer = pInstances[adcNum]->pBuffers[pADC->bufSel];
+
+	float resolution = 0;
+	switch (pInstances[adcNum]->config.resolution)
+	{
+	case 0:
+		resolution = 1 << 8;
+		break;
+	case 1:
+		resolution = 1 << 12;
+		break;
+	case 2:
+		resolution = 1 << 10;
+		break;
+	case 3:
+	default:
+		resolution = 1 << 16;
+		break;
+	}
+
+	resolution = 1/resolution;
+
+	for (uint32_t i = 0; i < *size; i++)
+	{
+		pBuffer[i] = pInternalBuffer[i] * resolution ;
+	}
+
+	return true;
+}
 
 void ADCx_IRQHandler(uint8_t adcNum)
 {

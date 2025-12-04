@@ -27,21 +27,28 @@
 #include <math.h>
 #include "FIR.h"
 #include "FFT.h"
+#include "DSP.h"
 
 /*******************************************************************************
  *                                MACROS
  ******************************************************************************/
 
-#define ADC_BUFFER_SIZE 256
-#define SAMPLE_FREQ 20000u
+#define SAMPLE_FREQ 2000u
 #define SAMPLE_PERIOD_US (float)1000000/(float)SAMPLE_FREQ
 
+#define MAX_TAU 40u
+#define WINDOW_SIZE 256
+#define ADC_BUFFER_SIZE WINDOW_SIZE
+#define FULL_BUFFER_SIZE (ADC_BUFFER_SIZE + MAX_TAU)
 /*******************************************************************************
  *                                VARIABLES
  ******************************************************************************/
 
 static ADC_Handle adc;
 static UART_Handle uart;
+
+static data_t data[FULL_BUFFER_SIZE];
+
 /*******************************************************************************
  *                           	PROTOTIPOS
  ******************************************************************************/
@@ -87,6 +94,14 @@ void App_Init (void)
 
 void App_Run (void)
 {
+	data_t data_out[MAX_TAU];
+	size_t size = 0;
+	if (ADC_GetBackBufferCopy(adc, (data+MAX_TAU), &size))
+	{
+		DifferenceFunction(data, data_out, WINDOW_SIZE, MAX_TAU);
 
-
+		CMNDF(data_out, MAX_TAU);
+		// Guarda los ultimos valores de la tanda nueva al principio del buffer para ser utilizados como datos viejos
+		memcpy(data, data+WINDOW_SIZE, MAX_TAU*sizeof(data_t));
+	}
 }

@@ -5,6 +5,9 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "drivers/Timer.h"
+#include "lut_tables.h"
+
 #define LOG2_10 3.3219280948873623478703194294894
 
 float log2f(float x)
@@ -39,12 +42,12 @@ Complex ComplexReIm(complex_type re, complex_type im)
 
 complex_type ComplexRe(Complex a)
 {
-    return a.absolute_value * cos(a.phase);
+    return a.absolute_value * fast_cos(a.phase);
 }
 
 complex_type ComplexIm(Complex a)
 {
-    return a.absolute_value * sin(a.phase);
+    return a.absolute_value * fast_sin(a.phase);
 }
 
 complex_type ComplexAbs(Complex a)
@@ -211,7 +214,12 @@ int ComputeFFT(Complex* in, Complex* out, const uint32_t n)
 
     const float gamma = (uint32_t)log2f(n);
 
+    ticks start = Now();
+
     Complex* W = CalculateTwiddleFactors(n);
+
+    volatile ticks ms0 = (Now() - start);
+   	start = Now();
 
     // Initialize loop variables
 
@@ -240,6 +248,9 @@ int ComputeFFT(Complex* in, Complex* out, const uint32_t n)
         gr *= 2;
     }
 
+    volatile ticks ms1 = (Now() - start);
+    start = Now();
+
     // Bit reversal reordering
     for (size_t k = 1; k <= n; ++k) {
         uint16_t g = BitRev((unsigned)(k - 1), GA);
@@ -251,6 +262,9 @@ int ComputeFFT(Complex* in, Complex* out, const uint32_t n)
         }
     }
 
+    volatile ticks ms2 = (Now() - start);
+    start = Now();
+
     free(W);
     return 0;
 }
@@ -261,7 +275,7 @@ int ComputeFFT(Complex* in, Complex* out, const uint32_t n)
  * Then the forward FFT is run. After thatm the imaginary part of the output vector
  * is negated. Last but not least the absolute value of the output is divided by N
  */
-int ComputeInverseFFT(Complex* in, Complex* out, const uint32_t n)
+int ComputeIFFT(Complex* in, Complex* out, const uint32_t n)
 {
 	// Negate input vector
 	for (uint16_t i = 0; i < n; i++)
