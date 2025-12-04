@@ -4,8 +4,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-typedef float data_t;
-typedef data_t complex_type;
+typedef float complex_type;
 typedef uint16_t scalar_type;
 
 
@@ -29,4 +28,5 @@ Complex ComplexExp(Complex a, complex_type b);
 int ComputeFFT(Complex* in, Complex* out, const uint32_t n);
 int ComputeIFFT(Complex* in, Complex* out, const uint32_t n);
 
+void do_fft(void);
 #endif

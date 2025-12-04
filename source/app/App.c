@@ -28,6 +28,8 @@
 #include "FIR.h"
 #include "FFT.h"
 #include "DSP.h"
+#include "arm_math.h"
+#include "arm_const_structs.h"
 
 /*******************************************************************************
  *                                MACROS
@@ -40,6 +42,8 @@
 #define WINDOW_SIZE 256
 #define ADC_BUFFER_SIZE WINDOW_SIZE
 #define FULL_BUFFER_SIZE (ADC_BUFFER_SIZE + MAX_TAU)
+
+#define THREHSOLD 0.1
 /*******************************************************************************
  *                                VARIABLES
  ******************************************************************************/
@@ -47,7 +51,7 @@
 static ADC_Handle adc;
 static UART_Handle uart;
 
-static data_t data[FULL_BUFFER_SIZE];
+static float data[FULL_BUFFER_SIZE];
 
 /*******************************************************************************
  *                           	PROTOTIPOS
@@ -91,17 +95,35 @@ void App_Init (void)
 		uart = UART_Init(&uart_config);
 	}
 }
+#define TEMPORAL_SMOOTHING_SAMPLES 40
+float tau_data[TEMPORAL_SMOOTHING_SAMPLES][MAX_TAU];
+uint16_t temporal_buffer_index = 0;
 
 void App_Run (void)
 {
-	data_t data_out[MAX_TAU];
 	size_t size = 0;
 	if (ADC_GetBackBufferCopy(adc, (data+MAX_TAU), &size))
 	{
-		DifferenceFunction(data, data_out, WINDOW_SIZE, MAX_TAU);
+		float (*data_out)[MAX_TAU] = &tau_data[temporal_buffer_index++];
+		ticks start = Now();
+		DifferenceFunction(data, *data_out, WINDOW_SIZE, MAX_TAU);
 
-		CMNDF(data_out, MAX_TAU);
+		CMNDF(*data_out, MAX_TAU);
+
+		// Threshold decide
+
+
+
+		for (uint32_t i = 0; i < MAX_TAU; i++)
+		{
+
+		}
+
 		// Guarda los ultimos valores de la tanda nueva al principio del buffer para ser utilizados como datos viejos
-		memcpy(data, data+WINDOW_SIZE, MAX_TAU*sizeof(data_t));
+		memcpy(data, data+WINDOW_SIZE, MAX_TAU*sizeof(float));
+		volatile ticks ms = Now() - start;
+		__NOP();
+
+		temporal_buffer_index %= TEMPORAL_SMOOTHING_SAMPLES;
 	}
 }

@@ -295,3 +295,33 @@ int ComputeIFFT(Complex* in, Complex* out, const uint32_t n)
 
 	return 0;
 }
+
+#include "arm_math.h"
+#include "arm_const_structs.h"
+
+#define FFT_SIZE 256
+
+float32_t input[FFT_SIZE];
+float32_t output[FFT_SIZE];
+
+void do_fft(void)
+{
+    // Example: fill input with something
+    for (int i = 0; i < FFT_SIZE; i++)
+        input[i] = arm_sin_f32(2 * PI * i / 32);
+
+    // Run RFFT
+    arm_rfft_fast_instance_f32 S;
+    arm_rfft_fast_init_f32(&S, FFT_SIZE);
+
+    arm_rfft_fast_f32(&S, input, output, 0);   // 0 = forward FFT
+
+    // Magnitudes (complex stored in interleaved format)
+    float32_t magnitudes[FFT_SIZE/2];
+    for (int k = 0; k < FFT_SIZE/2; k++)
+    {
+        float32_t real = output[2*k];
+        float32_t imag = output[2*k + 1];
+        magnitudes[k] = sqrtf(real*real + imag*imag);
+    }
+}
