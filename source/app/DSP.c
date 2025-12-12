@@ -11,42 +11,43 @@
 #include "lut_tables.h"
 
 static float buffer[MAX_BUFFER_SIZE*2] = {};
+static Complex cbuffer[MAX_BUFFER_SIZE*2] = {};
 
 bool AutocorrelationFunction(float* pIn, float* pOut, uint32_t w)
 {
-//	memset(buffer,0 , sizeof(Complex)*MAX_BUFFER_SIZE*2);
-//
-//	if (pOut == 0)
-//	{
-//		pOut = pIn;
-//	}
-//
-//	for (uint16_t i = 0; i < w; i++)
-//	{
-//		const float val = pIn[i];
-//		if (val >= 0)
-//			buffer[i] = (Complex){val, 0};
-//		else
-//			buffer[i] = (Complex){-val, M_PI};
-//	}
-//
-//	ComputeFFT(buffer, 0, w);
-//
-//	// Conjugate:
-//	for (uint16_t i = 0; i < w; i++)
-//	{
-//		buffer[i] = (Complex){pow(buffer[i].absolute_value, 2), 0};
-//	}
-//
-//	ComputeIFFT(buffer, 0, w);
-//
-//	for (uint16_t i = 0; i < w; i++)
-//	{
-//		const Complex temp = buffer[i];
-//		pOut[i] = fast_cos(temp.phase)*temp.absolute_value;
-//	}
-//
-//	return 1;
+	memset(cbuffer,0 , sizeof(Complex)*MAX_BUFFER_SIZE*2);
+
+	if (pOut == 0)
+	{
+		pOut = pIn;
+	}
+
+	for (uint16_t i = 0; i < w; i++)
+	{
+		const float val = pIn[i];
+		if (val >= 0)
+			cbuffer[i] = (Complex){val, 0};
+		else
+			cbuffer[i] = (Complex){-val, M_PI};
+	}
+
+	ComputeFFT(cbuffer, 0, w);
+
+	// Conjugate:
+	for (uint16_t i = 0; i < w; i++)
+	{
+		cbuffer[i] = (Complex){pow(cbuffer[i].absolute_value, 2), 0};
+	}
+
+	ComputeIFFT(cbuffer, 0, w);
+
+	for (uint16_t i = 0; i < w; i++)
+	{
+		const Complex temp = cbuffer[i];
+		pOut[i] = fast_cos(temp.phase)*temp.absolute_value;
+	}
+
+	return 1;
 }
 
 #include "arm_math.h"
@@ -103,7 +104,7 @@ bool DifferenceFunction(float* pIn, float* pOut, uint32_t w, uint32_t max_tau)
 
 	memset(buffer, 0, sizeof(buffer));
 	// ACF t
-	bool rv = AutocorrelationFunction_2(pIn, acf0, w);
+	bool rv = AutocorrelationFunction(pIn, acf0, w);
 
 	for (uint32_t i = 0; i < max_tau; i++)
 	{

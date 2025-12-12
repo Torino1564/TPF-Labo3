@@ -389,7 +389,6 @@ void ADCx_IRQHandler(uint8_t adcNum)
 		adc->bufSel = !adc->bufSel;
 		adc->newBufData = TRUE;
 	}
-
 	return;
 }
 

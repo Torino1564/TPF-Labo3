@@ -35,6 +35,8 @@
  *                                MACROS
  ******************************************************************************/
 
+#define MAX_STRING_LEN 64
+
 #define SAMPLE_FREQ 2000u
 #define SAMPLE_PERIOD_US (float)1000000/(float)SAMPLE_FREQ
 
@@ -43,7 +45,7 @@
 #define ADC_BUFFER_SIZE WINDOW_SIZE
 #define FULL_BUFFER_SIZE (ADC_BUFFER_SIZE + MAX_TAU)
 
-#define THREHSOLD 0.1
+#define THRESHOLD 0.1f
 /*******************************************************************************
  *                                VARIABLES
  ******************************************************************************/
@@ -81,6 +83,7 @@ void App_Init (void)
 		adc_config.avgSet = ADC_Avg4;
 		adc_config.resolution = 0;
 		adc_config.clkDiv = 3;
+		adc_config.adcNum = 0;
 		adc = ADC_Init(&adc_config);
 	}
 
@@ -95,35 +98,61 @@ void App_Init (void)
 		uart = UART_Init(&uart_config);
 	}
 }
-#define TEMPORAL_SMOOTHING_SAMPLES 40
-float tau_data[TEMPORAL_SMOOTHING_SAMPLES][MAX_TAU];
+#define TEMPORAL_SMOOTHING_SAMPLES 20
+float tau_data[TEMPORAL_SMOOTHING_SAMPLES+1][MAX_TAU];
 uint16_t temporal_buffer_index = 0;
-
+float* pAvaraged = (float*)tau_data[TEMPORAL_SMOOTHING_SAMPLES];
+#include "arm_math.h"
 void App_Run (void)
 {
 	size_t size = 0;
 	if (ADC_GetBackBufferCopy(adc, (data+MAX_TAU), &size))
 	{
-		float (*data_out)[MAX_TAU] = &tau_data[temporal_buffer_index++];
-		ticks start = Now();
-		DifferenceFunction(data, *data_out, WINDOW_SIZE, MAX_TAU);
+		float data_out[MAX_TAU] = {};
 
-		CMNDF(*data_out, MAX_TAU);
+		static const float F = 100;
+		for (uint32_t i = 0; i < FULL_BUFFER_SIZE; i++)
+		{
+			data[i] = arm_cos_f32(2*M_PI*i*(F/SAMPLE_FREQ));
+		}
+
+		//ticks start = Now();
+		DifferenceFunction(data, data_out, WINDOW_SIZE, MAX_TAU);
+
+		CMNDF(data_out, MAX_TAU);
 
 		// Threshold decide
 
-
+		uint32_t candidates[MAX_TAU] = {};
+		uint16_t index = 0;
 
 		for (uint32_t i = 0; i < MAX_TAU; i++)
 		{
-
+			if (data_out[i] < THRESHOLD)
+			{
+				candidates[index++] = i;
+			}
 		}
 
-		// Guarda los ultimos valores de la tanda nueva al principio del buffer para ser utilizados como datos viejos
-		memcpy(data, data+WINDOW_SIZE, MAX_TAU*sizeof(float));
-		volatile ticks ms = Now() - start;
-		__NOP();
+		uint32_t tau = 0;
 
-		temporal_buffer_index %= TEMPORAL_SMOOTHING_SAMPLES;
+		char buf[MAX_STRING_LEN] = {};
+		if (index != 0)
+		{
+			uint16_t freq = (uint16_t)(SAMPLE_FREQ / candidates[index-1]);
+			sprintf(buf, "Freq: %d\n", freq);
+		}
+		else
+		{
+			sprintf(buf, "Freq: NA\n");
+		}
+
+		UART_WriteString(uart, buf);
+#define OFFSET ((FULL_BUFFER_SIZE)-MAX_TAU)
+		// Guarda los ultimos valores de la tanda nueva al principio del buffer para ser utilizados como datos viejos
+		memcpy(data, data+OFFSET, MAX_TAU*sizeof(float));
+		//volatile ticks ms = Now() - start;
+
+		//temporal_buffer_index %= TEMPORAL_SMOOTHING_SAMPLES;
 	}
 }
