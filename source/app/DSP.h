@@ -9,7 +9,7 @@
 #define APP_DSP_H_
 
 // TODO: FIX THIS SHIT
-#define MAX_BUFFER_SIZE (256 + 40)
+#define MAX_BUFFER_SIZE (512 + 40)
 
 #include "FFT.h"
 
@@ -22,7 +22,7 @@
  */
 
 bool AutocorrelationFunction(float* pIn, float* pOut, uint32_t w);
-bool AutocorrelationFunction_2(float* pIn, float* pOut, uint32_t w);
+bool AutocorrelationFunction_2(const float* pIn, float* pOut, uint32_t w);
 bool DifferenceFunction(float* pIn, float* pOut, uint32_t w, uint32_t max_tau);
 bool CMNDF(float* pIn, uint32_t w);
 #endif /* APP_DSP_H_ */

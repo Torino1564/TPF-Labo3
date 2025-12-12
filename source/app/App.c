@@ -37,15 +37,16 @@
 
 #define MAX_STRING_LEN 64
 
-#define SAMPLE_FREQ 2000u
+#define SAMPLE_FREQ 5000u
 #define SAMPLE_PERIOD_US (float)1000000/(float)SAMPLE_FREQ
 
-#define MAX_TAU 40u
-#define WINDOW_SIZE 256
+#define MAX_TAU 100u
+#define WINDOW_SIZE 512
 #define ADC_BUFFER_SIZE WINDOW_SIZE
 #define FULL_BUFFER_SIZE (ADC_BUFFER_SIZE + MAX_TAU)
 
-#define THRESHOLD 0.1f
+#define THRESHOLD 0.15f
+#define UPPER_THRESHOLD 0.3f
 /*******************************************************************************
  *                                VARIABLES
  ******************************************************************************/
@@ -54,6 +55,8 @@ static ADC_Handle adc;
 static UART_Handle uart;
 
 static float data[FULL_BUFFER_SIZE];
+
+static uint32_t tau_local_search = 6;
 
 /*******************************************************************************
  *                           	PROTOTIPOS
@@ -97,24 +100,25 @@ void App_Init (void)
 		uart_config.mode = UART_TRANSCEIVER;
 		uart = UART_Init(&uart_config);
 	}
+
+	gpioMode(PORTNUM2PIN(PC, 10), OUTPUT);
 }
-#define TEMPORAL_SMOOTHING_SAMPLES 20
-float tau_data[TEMPORAL_SMOOTHING_SAMPLES+1][MAX_TAU];
-uint16_t temporal_buffer_index = 0;
-float* pAvaraged = (float*)tau_data[TEMPORAL_SMOOTHING_SAMPLES];
+
 #include "arm_math.h"
+
 void App_Run (void)
 {
 	size_t size = 0;
 	if (ADC_GetBackBufferCopy(adc, (data+MAX_TAU), &size))
 	{
+		gpioWrite(PORTNUM2PIN(PC, 10), 1);
 		float data_out[MAX_TAU] = {};
 
-		static const float F = 100;
-		for (uint32_t i = 0; i < FULL_BUFFER_SIZE; i++)
-		{
-			data[i] = arm_cos_f32(2*M_PI*i*(F/SAMPLE_FREQ));
-		}
+//		static const float F = 100;
+//		for (uint32_t i = 0; i < FULL_BUFFER_SIZE; i++)
+//		{
+//			data[i] = arm_cos_f32(2*M_PI*i*(F/SAMPLE_FREQ));
+//		}
 
 		//ticks start = Now();
 		DifferenceFunction(data, data_out, WINDOW_SIZE, MAX_TAU);
@@ -122,37 +126,68 @@ void App_Run (void)
 		CMNDF(data_out, MAX_TAU);
 
 		// Threshold decide
-
-		uint32_t candidates[MAX_TAU] = {};
 		uint16_t index = 0;
 
+		uint32_t tau = 0;
+		uint32_t tau_threshold = 0;
+		float minimum = 999;
 		for (uint32_t i = 0; i < MAX_TAU; i++)
 		{
-			if (data_out[i] < THRESHOLD)
+			float current = data_out[i];
+			if (current < minimum)
 			{
-				candidates[index++] = i;
+				tau = i;
+				minimum = current;
+			}
+			if (current < THRESHOLD)
+			{
+				tau_threshold = i;
+
+				// Search for the local minimum
+				int32_t lower_limit = i - tau_local_search;
+				lower_limit = lower_limit < 0 ? 0 : lower_limit;
+
+				int32_t upper_limit = i + tau_local_search;
+				upper_limit = upper_limit >= MAX_TAU ? MAX_TAU : upper_limit;
+				float local_min = current;
+
+				for (uint32_t j = lower_limit; j < upper_limit; j++)
+				{
+					if (data_out[j] < local_min)
+					{
+						local_min = data_out[j];
+						tau_threshold = j;
+					}
+				}
+				break;
 			}
 		}
-
-		uint32_t tau = 0;
+		if (tau_threshold != 0)
+		{
+			tau = tau_threshold;
+		}
+		else if (minimum > UPPER_THRESHOLD)
+		{
+			tau = 0;
+		}
 
 		char buf[MAX_STRING_LEN] = {};
-		if (index != 0)
+		if (tau != 0)
 		{
-			uint16_t freq = (uint16_t)(SAMPLE_FREQ / candidates[index-1]);
-			sprintf(buf, "Freq: %d\n", freq);
+			uint16_t freq = (uint16_t)(SAMPLE_FREQ / tau);
+			sprintf(buf, "%d\n", freq);
 		}
 		else
 		{
-			sprintf(buf, "Freq: NA\n");
+			sprintf(buf, "NA\n");
 		}
 
 		UART_WriteString(uart, buf);
+
 #define OFFSET ((FULL_BUFFER_SIZE)-MAX_TAU)
 		// Guarda los ultimos valores de la tanda nueva al principio del buffer para ser utilizados como datos viejos
 		memcpy(data, data+OFFSET, MAX_TAU*sizeof(float));
-		//volatile ticks ms = Now() - start;
 
-		//temporal_buffer_index %= TEMPORAL_SMOOTHING_SAMPLES;
+		gpioWrite(PORTNUM2PIN(PC, 10), 0);
 	}
 }

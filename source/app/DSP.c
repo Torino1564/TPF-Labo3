@@ -53,31 +53,36 @@ bool AutocorrelationFunction(float* pIn, float* pOut, uint32_t w)
 #include "arm_math.h"
 #include "arm_const_structs.h"
 
-bool AutocorrelationFunction_2(float* pIn, float* pOut, uint32_t w)
+bool AutocorrelationFunction_2(const float* pIn, float* pOut, uint32_t w)
 {
-	memset(buffer,0 , sizeof(float)*MAX_BUFFER_SIZE*2);
-	float* x = pIn;
-	float* X = buffer;
-	float* rxx = pOut;
-
+	memset(buffer, 0, sizeof(float)*MAX_BUFFER_SIZE*2);
+	memcpy(buffer+w, pIn, sizeof(float)*w);
 	arm_rfft_fast_instance_f32 S;
-
-	// Initialize FFT
 	arm_rfft_fast_init_f32(&S, w);
+
+	float* X = buffer;
+	float* x = buffer+w;
+	float* r = pOut;
 
 	// FFT
 	arm_rfft_fast_f32(&S, x, X, 0);
 
-	// Compute |X|^2 (power spectrum)
-	for (int i = 0; i < w; i += 2) {
-	    float re = X[i];
-	    float im = X[i+1];
-	    X[i]   = re*re + im*im;  // store power in real part
-	    X[i+1] = 0.0f;
+	// Power spectrum = X * conj(X)
+	X[0] = X[0] * X[0];
+	X[1] = X[1] * X[1];
+
+	for (uint32_t k = 1; k < w/2; k++)
+	{
+		float re = X[2*k];
+		float im = X[2*k + 1];
+		float mag2 = re*re + im*im;
+
+		X[2*k]     = mag2;
+		X[2*k + 1] = 0.0f;
 	}
 
 	// IFFT → autocorrelation
-	arm_rfft_fast_f32(&S, X, rxx, 1);
+	arm_rfft_fast_f32(&S, X, r, 1);
 }
 
 /* Compute difference function using a linear iteration and not FFT
@@ -104,7 +109,7 @@ bool DifferenceFunction(float* pIn, float* pOut, uint32_t w, uint32_t max_tau)
 
 	memset(buffer, 0, sizeof(buffer));
 	// ACF t
-	bool rv = AutocorrelationFunction(pIn, acf0, w);
+	bool rv = AutocorrelationFunction_2(pIn, acf0, w);
 
 	for (uint32_t i = 0; i < max_tau; i++)
 	{
