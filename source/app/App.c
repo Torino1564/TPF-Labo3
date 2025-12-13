@@ -42,12 +42,12 @@
 #define SAMPLE_FREQ 5000u
 #define SAMPLE_PERIOD_US (float)1000000/(float)SAMPLE_FREQ
 
-#define MAX_TAU 100u
+#define MAX_TAU 200u
 #define WINDOW_SIZE 512
 #define ADC_BUFFER_SIZE WINDOW_SIZE
 #define FULL_BUFFER_SIZE (ADC_BUFFER_SIZE + MAX_TAU)
 
-#define THRESHOLD 0.18f
+#define THRESHOLD 0.15f
 #define UPPER_THRESHOLD 0.3f
 /*******************************************************************************
  *                                VARIABLES
@@ -147,7 +147,6 @@ void App_Init (void)
 
 void App_Run (void)
 {
-
 	// DSP
 	size_t size = 0;
 	if (ADC_GetBackBufferCopy(adc, (data+MAX_TAU), &size))
@@ -207,11 +206,19 @@ void App_Run (void)
 		{
 			tau = 0;
 		}
+		float real_tau = tau;
+		// Quadratic interpolation
+		if (tau != 0 && tau != (MAX_TAU-1))
+		{
+			float x_offset = 0;
+			quadratic_interp_min_x(data_out[tau-1], data_out[tau], data_out[tau+1], &x_offset);
+			real_tau += x_offset;
+		}
 
 		char buf[MAX_STRING_LEN] = {};
 		if (tau != 0)
 		{
-			uint16_t freq = (uint16_t)(SAMPLE_FREQ / tau);
+			uint16_t freq = (uint16_t)((float)SAMPLE_FREQ / real_tau);
 			sprintf(buf, "%d\n\r", freq);
 		}
 		else
