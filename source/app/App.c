@@ -23,6 +23,7 @@
 #include "drivers/dac.h"
 #include "drivers/CMP.h"
 #include "drivers/FTM.h"
+#include "drivers/Button.h"
 #define _USE_MATH_DEFINES
 #include <math.h>
 #include "FIR.h"
@@ -30,6 +31,7 @@
 #include "DSP.h"
 #include "arm_math.h"
 #include "arm_const_structs.h"
+#include "KPS.h"
 
 /*******************************************************************************
  *                                MACROS
@@ -45,7 +47,7 @@
 #define ADC_BUFFER_SIZE WINDOW_SIZE
 #define FULL_BUFFER_SIZE (ADC_BUFFER_SIZE + MAX_TAU)
 
-#define THRESHOLD 0.15f
+#define THRESHOLD 0.18f
 #define UPPER_THRESHOLD 0.3f
 /*******************************************************************************
  *                                VARIABLES
@@ -58,10 +60,26 @@ static float data[FULL_BUFFER_SIZE];
 
 static uint32_t tau_local_search = 6;
 
+enum BUTTON_PINS {
+	MI = PORTNUM2PIN(PA, 1),
+	SI = PORTNUM2PIN(PB, 23),
+	SOL = PORTNUM2PIN(PA, 2),
+	RE = PORTNUM2PIN(PC, 16),
+	LA = PORTNUM2PIN(PC, 17),
+	MI6 = PORTNUM2PIN(PB, 9)
+};
+
+static uint32_t notes[] = {
+	E1, B2, G3, D4, A5, E6
+};
+
+#define STRINGS 6
+
+uint16_t buttonIds[STRINGS] = {0};
+
 /*******************************************************************************
  *                           	PROTOTIPOS
  ******************************************************************************/
-
 
 /*******************************************************************************
  *                           	FUNCIONES
@@ -70,12 +88,15 @@ static uint32_t tau_local_search = 6;
 /* Función de inicialización */
 void App_Init (void)
 {
+	// Systick Init
 	TimerInit();
+	gpioInitInterrupts();
+
 	// Init ADC
 	{
 		ADC_Config adc_config = {};
 		adc_config.par = 0;
-		adc_config.channel = 13;
+		adc_config.channel = 1;
 		adc_config.adcp = PORTNUM2PIN(PB, 3);
 		adc_config.contConv = 0;
 		adc_config.dmaEnable = 1;
@@ -101,24 +122,38 @@ void App_Init (void)
 		uart = UART_Init(&uart_config);
 	}
 
+	// Init Buttons
+	buttonIds[0] = NewButton(MI, 0);
+	buttonIds[1] = NewButton(SI, 0);
+	buttonIds[2] = NewButton(SOL, 0);
+	buttonIds[3] = NewButton(RE, 0);
+	buttonIds[4] = NewButton(LA, 0);
+	buttonIds[5] = NewButton(MI6, 0);
+
 	gpioMode(PORTNUM2PIN(PC, 10), OUTPUT);
+
+	// Init KPS
+	{
+		KPS_Config cfg = {
+				.sample_frequency = 20000,
+				.feedback_const1 = 500,
+				.feedback_const2 = 500
+		};
+		KPS_Init(&cfg);
+	}
 }
 
 #include "arm_math.h"
 
 void App_Run (void)
 {
+
+	// DSP
 	size_t size = 0;
 	if (ADC_GetBackBufferCopy(adc, (data+MAX_TAU), &size))
 	{
 		gpioWrite(PORTNUM2PIN(PC, 10), 1);
 		float data_out[MAX_TAU] = {};
-
-//		static const float F = 100;
-//		for (uint32_t i = 0; i < FULL_BUFFER_SIZE; i++)
-//		{
-//			data[i] = arm_cos_f32(2*M_PI*i*(F/SAMPLE_FREQ));
-//		}
 
 		//ticks start = Now();
 		DifferenceFunction(data, data_out, WINDOW_SIZE, MAX_TAU);
@@ -134,6 +169,8 @@ void App_Run (void)
 		for (uint32_t i = 0; i < MAX_TAU; i++)
 		{
 			float current = data_out[i];
+			if (current < 0)
+				continue;
 			if (current < minimum)
 			{
 				tau = i;
@@ -175,11 +212,11 @@ void App_Run (void)
 		if (tau != 0)
 		{
 			uint16_t freq = (uint16_t)(SAMPLE_FREQ / tau);
-			sprintf(buf, "%d\n", freq);
+			sprintf(buf, "%d\n\r", freq);
 		}
 		else
 		{
-			sprintf(buf, "NA\n");
+			sprintf(buf, "NA\n\r");
 		}
 
 		UART_WriteString(uart, buf);
@@ -190,4 +227,15 @@ void App_Run (void)
 
 		gpioWrite(PORTNUM2PIN(PC, 10), 0);
 	}
+
+
+	for (uint32_t i = 0; i < STRINGS; i++)
+	{
+		if (readButtonStatus(buttonIds[i]))
+		{
+			readButtonData(buttonIds[i]);
+			KPS_SendNote(notes[i]);
+		}
+	}
+
 }

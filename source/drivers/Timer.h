@@ -23,7 +23,7 @@ typedef uint32_t service_id;
 /*******************************************************************************
  *                                MACROS
  ******************************************************************************/
-#define TICKS_PER_SECOND (ticks)1000u
+#define TICKS_PER_SECOND (ticks)40000u
 #define MS_TO_TICKS(x) (ticks)((x) * TICKS_PER_SECOND/1000)
 #define US_TO_TICKS(x) (ticks)((x) * ( TICKS_PER_SECOND)/1000000)
 

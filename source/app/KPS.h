@@ -10,6 +10,14 @@
 
 #include <stdint.h>
 
+//Guitar Frecuencies
+#define E1 330
+#define B2 246
+#define G3 195
+#define D4 146
+#define A5 110
+#define E6 82
+
 //Note Frecuency
 #define DOn       261 //.63
 #define DOSOn     277 //.18
@@ -39,8 +47,8 @@
 
 typedef struct{
 	uint32_t sample_frequency;
-	uint32_t feedback_const1;
-	uint32_t feedback_const2;
+	int64_t feedback_const1;
+	int64_t feedback_const2;
 }KPS_Config;
 
 /********************** external functions declaration ***********************/

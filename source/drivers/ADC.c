@@ -365,6 +365,18 @@ bool ADC_GetBackBufferCopy(uint8_t adcNum, float* pBuffer, size_t* size)
 		pBuffer[i] = pInternalBuffer[i] * resolution ;
 	}
 
+	// Remove mean
+	float accumulator = 0;
+	for (uint32_t i = 0; i < *size; i++)
+	{
+		accumulator += pBuffer[i];
+	}
+	accumulator /= *size;
+	for (uint32_t i = 0; i < *size; i++)
+	{
+		pBuffer[i] -= accumulator;
+	}
+
 	return true;
 }
 
